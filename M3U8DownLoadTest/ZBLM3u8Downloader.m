@@ -20,6 +20,7 @@
 @property (nonatomic, assign) NSInteger successCount;
 @property (nonatomic, assign) NSInteger failCount;
 @property (nonatomic, assign, getter = isSuspend) BOOL suspend;
+@property (nonatomic, assign, getter = isResumming) BOOL resumming;
 @property (nonatomic, copy) ZBLM3u8DownloaderCompletaionHandler completaionHandler;
 @end
 /*控制下载  控制下载并发  保存下载文件，通知下载完成 暂停任务 重新开启任务*/
@@ -38,6 +39,7 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
         _tsSemaphore = dispatch_semaphore_create(maxConcurrenceDownloadTaskCount);
         _lock = dispatch_semaphore_create(1);
         _suspend = NO;
+        _resumming = NO;
         if (downloadQueue) {
             _downloadQueue = downloadQueue;
         }
@@ -195,15 +197,19 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
 {
     //恢复挂起的任务、重新创建发起失败的任务、没有创建任务的创建任务、已经创建没有发起的发起任务
     self.suspend = NO;
-    dispatch_async(self.downloadQueue, ^{
-        [self.fileDownloadInfos enumerateObjectsUsingBlock:^(ZBLM3u8FileDownloadInfo * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-            if (obj.downloadTask.state == NSURLSessionTaskStateSuspended && !obj.beStopResumeTask) {
-                NSLog(@"resume SuspendedTask");
-                if (!self.suspend) {
-                    [obj.downloadTask resume];
-                }
+    [self.fileDownloadInfos enumerateObjectsUsingBlock:^(ZBLM3u8FileDownloadInfo * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (obj.downloadTask.state == NSURLSessionTaskStateSuspended && !obj.beStopResumeTask) {
+            NSLog(@"resume SuspendedTask");
+            if (!self.suspend) {
+                [obj.downloadTask resume];
             }
-        }];
+        }
+    }];
+    dispatch_async(self.downloadQueue, ^{
+        if (self.isResumming) {
+            return;
+        }
+        _resumming = YES;
         [self.fileDownloadInfos enumerateObjectsUsingBlock:^(ZBLM3u8FileDownloadInfo * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
             if (obj.downloadTask.error && obj.downloadTask.state == NSURLSessionTaskStateCompleted)
             {
@@ -252,6 +258,7 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
                 [self createDownloadTaskWithIndex:idx];
             }
         }];
+        _resumming = NO;
     });
 }
 

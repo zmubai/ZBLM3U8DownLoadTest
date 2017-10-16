@@ -126,7 +126,9 @@ NSString * const ZBLM3u8DownloadContainerGreateRootDirErrorDomain = @"error.m3u8
         } downloadQueue:nil];
         if (_downloadProgressHandler) {
             [_downloader setDownloadProgressHandler:^(float progress){
-                weakself.downloadProgressHandler(progress);
+                if (weakself.downloadProgressHandler) {
+                    weakself.downloadProgressHandler(progress);
+                }
             }];
         }
         [self _unlock];
