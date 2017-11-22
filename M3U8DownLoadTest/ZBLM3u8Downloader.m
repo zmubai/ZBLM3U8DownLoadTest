@@ -19,8 +19,8 @@
 @property (nonatomic, strong) NSMutableArray <ZBLM3u8FileDownloadInfo*> *fileDownloadInfos;
 @property (nonatomic, assign) NSInteger successCount;
 @property (nonatomic, assign) NSInteger failCount;
-@property (nonatomic, assign, getter = isSuspend) BOOL suspend;
-@property (nonatomic, assign, getter = isResumming) BOOL resumming;
+@property (nonatomic, assign) BOOL suspend;
+@property (nonatomic, assign) BOOL resumming;
 @property (nonatomic, copy) ZBLM3u8DownloaderCompletaionHandler completaionHandler;
 @end
 /*控制下载  控制下载并发  保存下载文件，通知下载完成 暂停任务 重新开启任务*/
@@ -95,21 +95,21 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
                 else
                 {
                     //真正的创建下载任务
-                    [self createDownloadTaskWithIndex:idx];
+                    [self createDownloadTaskWithDownloadInfo:obj];
                 }
             }
         }];
     });
 }
 
-- (void)createDownloadTaskWithIndex:(NSInteger)index
+- (void)createDownloadTaskWithDownloadInfo:(ZBLM3u8FileDownloadInfo*)downloadInfo
 {
-    ZBLM3u8FileDownloadInfo *downloadInfo = _fileDownloadInfos[index];
+    
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:downloadInfo.downloadUrl]];
     __block NSData *data = nil;
     downloadInfo.downloadTask = [self.sessionManager downloadTaskWithRequest:request progress:^(NSProgress * _Nonnull downloadProgress) {
         
-        NSLog(@"%@:%0.2lf%%\n",@(index), (float)downloadProgress.completedUnitCount / (float)downloadProgress.totalUnitCount * 100);
+        NSLog(@"%@:%0.2lf%%\n",downloadInfo.filePath, (float)downloadProgress.completedUnitCount / (float)downloadProgress.totalUnitCount * 100);
         
     } destination:^NSURL * _Nonnull(NSURL * _Nonnull targetPath, NSURLResponse * _Nonnull response) {
         
@@ -124,6 +124,14 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
         }
         else
         {
+            //被标记为重新发起的错误任务，在这里重新发起
+            if (downloadInfo.needBeResume) {
+                downloadInfo.needBeResume = NO;
+                [self createDownloadTaskWithDownloadInfo:downloadInfo];
+                return ;
+            }
+            //标记为失败用于状态判断，防止count计算错误
+            downloadInfo.fail = YES;
             NSLog(@"\n\nfile download failed:%@ \n\nerror:%@\n\n",downloadInfo.filePath,error);
             [self verifyDownloadCountAndCallbackByDownloadSuccess:NO];
         }
@@ -150,6 +158,15 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
         }
         else
         {
+            //被标记为重新发起的错误任务，在这里重新发起
+            if (downloadInfo.needBeResume) {
+                downloadInfo.needBeResume = NO;
+                [self createDownloadTaskWithDownloadInfo:downloadInfo];
+                return ;
+            }
+            //标记为失败用于状态判断，防止count计算错误
+            downloadInfo.fail = YES;
+            
             NSLog(@"save downloadFail failed:%@ \nerror:%@",downloadInfo.filePath,error);
             [self verifyDownloadCountAndCallbackByDownloadSuccess:NO];
         }
@@ -175,14 +192,14 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
     }
     else
     {
-        _failCount ++;
+        _failCount = _failCount + 1;
     }
     
     if (_failCount > 0 &&
         _successCount + _failCount == _fileDownloadInfos.count) {
         NSInteger fc = 0;
         for (ZBLM3u8FileDownloadInfo *di in _fileDownloadInfos) {
-            if (di.isSuccess == NO) {
+            if (di.success == NO) {
                 fc ++;
             }
         }
@@ -206,23 +223,27 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
         }
     }];
     dispatch_async(self.downloadQueue, ^{
-        if (self.isResumming) {
+        if (self.resumming) {
             return;
         }
         _resumming = YES;
         [self.fileDownloadInfos enumerateObjectsUsingBlock:^(ZBLM3u8FileDownloadInfo * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
             if (obj.downloadTask.error && obj.downloadTask.state == NSURLSessionTaskStateCompleted)
             {
+                if (obj.fail == NO) {
+                    //如果失败了但是并没有标记失败，代表网络请求的整个回调并没有执行完毕，为了count的统计准确，做标记后在网络回调哪里重新发起。
+                    obj.needBeResume = YES;
+                    return ;
+                }
                 dispatch_semaphore_wait(self.tsSemaphore, DISPATCH_TIME_FOREVER);
                 if (self.suspend) {
                     dispatch_semaphore_signal(self.tsSemaphore);
                     *stop = YES;
                     return ;
                 }
-                _failCount --;
-                NSParameterAssert(_failCount >= 0);
+                _failCount = _failCount - 1;
                 NSLog(@"reCreate errorTask");
-                [self createDownloadTaskWithIndex:idx];
+                [self createDownloadTaskWithDownloadInfo:obj];
             }
         }];
         
@@ -255,7 +276,7 @@ NSString * const ZBLM3u8DownloaderErrorDomain = @"error.m3u8.downloader";
                 obj.beStopCreateTask = NO;
                 NSLog(@"self.suspend = %d",self.suspend);
                 NSLog(@"reGreate beStopCreateTask");
-                [self createDownloadTaskWithIndex:idx];
+                [self createDownloadTaskWithDownloadInfo:obj];
             }
         }];
         _resumming = NO;

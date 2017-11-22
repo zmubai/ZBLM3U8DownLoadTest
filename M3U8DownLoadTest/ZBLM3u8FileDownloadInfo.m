@@ -14,8 +14,11 @@
     self = [super init];
     if (self) {
         _success = NO;
+        _fail = NO;
+        _needBeResume = NO;
         _beStopCreateTask = NO;
         _beStopResumeTask = NO;
+        
     }
     return self;
 }
