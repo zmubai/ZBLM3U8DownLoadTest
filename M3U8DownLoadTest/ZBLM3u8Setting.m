@@ -13,7 +13,7 @@
 #pragma mark - download Controller parameter
 + (NSInteger)maxConcurrentMovieDownloadCount
 {
-    return 1;
+    return 2;
 }
 + (NSInteger)maxTsFileDownloadCount
 {

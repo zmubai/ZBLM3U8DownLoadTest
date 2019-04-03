@@ -41,24 +41,31 @@ NSString * const ZBLM3u8DownloadContainerGreateRootDirErrorDomain = @"error.m3u8
     }
     return self;
 }
+
 - (void)dealloc
 {
-    
+
 }
 
-- (void)_lock
-{
-    dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER);
-}
+/*
+ 加锁说明：
+ 1.startDownloadWithUrlString 执行过程中可能会接受suspendDownload或者resumeDownload，故其需要保持原子性。startDownloadWithUrlString - 》 suspendDownload-》stop
+ 2.resumeDownload  stop->start
+ 3.suspendDownload startDownloadWithUrlString -> stop
+ 以上个方法需要互斥
+ */
 
-- (void)_unlock
-{
-    dispatch_semaphore_signal(_lock);
-}
-
+/*
+ 1.外部发起
+ 2.resume方法发起
+ */
 - (void)startDownloadWithUrlString:(NSString *)urlStr  downloadProgressHandler:(ZBLM3u8DownloadProgressHandler)downloadProgressHandler completaionHandler:(ZBLM3u8DownloadCompletaionHandler)completaionHandler
 {
     [self _lock];
+    if (_suspend) {
+        [self _unlock];
+        return;
+    }
     if (!_m3u8OriUrl) {
         _m3u8OriUrl = urlStr;
     }
@@ -74,46 +81,68 @@ NSString * const ZBLM3u8DownloadContainerGreateRootDirErrorDomain = @"error.m3u8
         [self _unlock];
         return;
     }
-    if (_suspend) {
-        [self _unlock];
-        return;
-    }
-    
     [ZBLM3u8Analysiser analysisWithUrlString:urlStr completaionHandler:^(ZBLM3u8Info *m3u8Info, NSError *error) {
         if (!error) {
             self.m3u8Info = m3u8Info;
-            [self _unlock];
-            
             if (self.analysisM3u8InfoSuccessBlock) {
                self.maxConcurrenceDownloadTaskCount = self.analysisM3u8InfoSuccessBlock();
-            }
-            if (_suspend) {
-                return;
             }
             [self downloadAction];
         }
         else
         {
-            [self _unlock];
             _completaionHandler(nil,error);
             NSLog(@"error:%@",error.description);
         }
     }];
+    [self _unlock];
 }
 
-- (BOOL)tryCreateRootDir
+//通过suspend变量 控制执行的步骤
+- (void)resumeDownload
 {
-    return  [ZBLM3u8FileManager tryGreateDir:[[ZBLM3u8Setting commonDirPrefix]  stringByAppendingPathComponent:[ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl]]];
+    [self _lock];
+    _suspend = NO;
+    //任何步骤都没有开启，等待上层发起
+    if (!_m3u8OriUrl) {
+        [self _unlock];
+        return;
+    }
+
+    //解析失败，重新开始
+    if (_m3u8OriUrl && !_m3u8Info) {
+        [self _unlock];
+        ///该方法里面自带锁
+        [self startDownloadWithUrlString:_m3u8OriUrl downloadProgressHandler:_downloadProgressHandler completaionHandler:_completaionHandler];
+        return;
+    }
+    //解析成功但下载被中断了， 发起下载
+    if (!_downloader) {
+        [self downloadAction];
+    }
+    else
+    {
+        //否则告诉下载器恢复下载
+        [_downloader resumeDownload];
+    }
+    [self _unlock];
 }
 
+- (void)suspendDownload
+{
+    //设置变量，中断流程
+    [self _lock];
+    _suspend = YES;
+    //告诉下层中断下载
+    [_downloader suspendDownload];
+    [self _unlock];
+}
+
+#pragma mark - create downloader
+/*外部已经加锁，故内部不需要额外加锁，否则导致死锁*/
 - (void)downloadAction
 {
     if (!_downloader) {
-        [self _lock];
-        if (_downloader) {
-            [self _unlock];
-            return;
-        }
         __weak __typeof(self) weakself = self;
         _downloader = [[ZBLM3u8Downloader alloc]initWithfileDownloadInfos:[self fileDownloadInfos] maxConcurrenceDownloadTaskCount:_maxConcurrenceDownloadTaskCount completaionHandler:^(NSError *error) {
             if (!error) {
@@ -131,21 +160,20 @@ NSString * const ZBLM3u8DownloadContainerGreateRootDirErrorDomain = @"error.m3u8
                 }
             }];
         }
-        [self _unlock];
-        
         [_downloader startDownload];
     }
+}
+
+#pragma mark - info & file
+- (BOOL)tryCreateRootDir
+{
+    return  [ZBLM3u8FileManager tryGreateDir:[[ZBLM3u8Setting commonDirPrefix]  stringByAppendingPathComponent:[ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl]]];
 }
 
 - (NSMutableArray <ZBLM3u8FileDownloadInfo*> *)fileDownloadInfos
 {
     NSMutableArray <ZBLM3u8FileDownloadInfo*> *fileDownloadInfos = @[].mutableCopy;
     if (_m3u8Info.keyUri.length > 0) {
-        _m3u8Info.keyLocalUri = [NSString stringWithFormat:@"%@/%@/%@",
-                                 [ZBLM3u8Setting localHost],
-                                 [ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl],
-                                 [ZBLM3u8Setting keyFileName]];
-        
         ZBLM3u8FileDownloadInfo *downloadKeyInfo = [ZBLM3u8FileDownloadInfo new];
         downloadKeyInfo.downloadUrl = _m3u8Info.keyUri;
         downloadKeyInfo.filePath = [[ZBLM3u8Setting fullCommonDirPrefixWithUrl:_m3u8OriUrl]stringByAppendingPathComponent:[ZBLM3u8Setting keyFileName]];
@@ -153,15 +181,13 @@ NSString * const ZBLM3u8DownloadContainerGreateRootDirErrorDomain = @"error.m3u8
     }
     
     for (ZBLM3u8TsInfo *tsInfo in _m3u8Info.tsInfos) {
-        tsInfo.localUrlString = [NSString stringWithFormat:@"%@/%@/%@",
-                                 [ZBLM3u8Setting localHost],
-                                 [ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl],
-                                 [ZBLM3u8Setting tsFileWithIdentify:@(tsInfo.index).stringValue]];
-        
-        ZBLM3u8FileDownloadInfo *downloadInfo = [ZBLM3u8FileDownloadInfo new];
+         ZBLM3u8FileDownloadInfo *downloadInfo = [ZBLM3u8FileDownloadInfo new];
         downloadInfo.downloadUrl = tsInfo.oriUrlString;
         downloadInfo.filePath = [[ZBLM3u8Setting fullCommonDirPrefixWithUrl:_m3u8OriUrl]stringByAppendingPathComponent:[ZBLM3u8Setting tsFileWithIdentify:@(tsInfo.index).stringValue]];
         [fileDownloadInfos addObject:downloadInfo];
+        if (tsInfo.localUrlString == nil) {
+            NSLog(@"");
+        }
     }
     
     return fileDownloadInfos;
@@ -183,43 +209,32 @@ NSString * const ZBLM3u8DownloadContainerGreateRootDirErrorDomain = @"error.m3u8
     }];
 }
 
-//通过suspend变量 控制执行的步骤
-- (void)resumeDownload
+#pragma mark -
+- (void)_lock
 {
-    _suspend = NO;
-    
-    //任何步骤都没有开启，等待上层发起
-    if (!_m3u8OriUrl) {
-        return;
-    }
-    
-    //解析失败，重新开始
-    [self _lock];
-    if (_m3u8OriUrl && !_m3u8Info) {
-        [self _unlock];
-        [self startDownloadWithUrlString:_m3u8OriUrl downloadProgressHandler:_downloadProgressHandler completaionHandler:_completaionHandler];
-        return;
-    }
-    [self _unlock];
-    
-    //解析成功但下载被中断了， 发起下载
-    if (!_downloader) {
-        [self downloadAction];
-    }
-    else
-    {
-        //否则告诉下载器恢复下载
-       [_downloader resumeDownload];
-    }
+    dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER);
 }
 
-- (void)suspendDownload
+- (void)_unlock
 {
-    //设置变量，中断流程
-    _suspend = YES;
-    
-    //告诉下层中断下载
-    [_downloader suspendDownload];
+    dispatch_semaphore_signal(_lock);
+}
+
+- (void)setM3u8Info:(ZBLM3u8Info *)m3u8Info
+{
+    _m3u8Info = m3u8Info;
+    if (_m3u8Info.keyUri.length > 0) {
+        _m3u8Info.keyLocalUri = [NSString stringWithFormat:@"%@/%@/%@",
+                                 [ZBLM3u8Setting localHost],
+                                 [ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl],
+                                 [ZBLM3u8Setting keyFileName]];
+    }
+    for (ZBLM3u8TsInfo *tsInfo in _m3u8Info.tsInfos) {
+        tsInfo.localUrlString = [NSString stringWithFormat:@"%@/%@/%@",
+                                 [ZBLM3u8Setting localHost],
+                                 [ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl],
+                                 [ZBLM3u8Setting tsFileWithIdentify:@(tsInfo.index).stringValue]];
+    }
 }
 
 @end

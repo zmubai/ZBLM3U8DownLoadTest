@@ -40,7 +40,7 @@
         sharedInstance.downloadQueue = dispatch_queue_create("ZBLM3u8Manager.download", DISPATCH_QUEUE_CONCURRENT);
         sharedInstance.lock = dispatch_semaphore_create(1);
         sharedInstance.suspend = NO;
-        [sharedInstance controllerDownloadByNetWorkStatus];
+//        [sharedInstance controllerDownloadByNetWorkStatus];
     });
     return sharedInstance;
 }
@@ -57,46 +57,55 @@
 }
 
 #pragma mark - download
-- (void)controllerDownloadByNetWorkStatus
-{
-    __weak __typeof(self) weakSelf = self;
-    [[AFNetworkReachabilityManager sharedManager] setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
-        switch (status) {
-            case AFNetworkReachabilityStatusReachableViaWiFi:
-                NSLog(@"manager suspendDownload");
-                [weakSelf resumeDownload];
-                
-                break;
-            default:
-                
-                NSLog(@"manager suspendDownload");
-//                [weakSelf suspendDownload];
-                break;
-        }
-    }];
-    [[AFNetworkReachabilityManager sharedManager]startMonitoring];
-}
+/*检测网络恢复下载功能*/
+//- (void)controllerDownloadByNetWorkStatus
+//{
+//    __weak __typeof(self) weakSelf = self;
+//    [[AFNetworkReachabilityManager sharedManager] setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
+//        switch (status) {
+//            case AFNetworkReachabilityStatusReachableViaWiFi:
+//                NSLog(@"manager suspendDownload");
+//                [weakSelf resumeDownload];
+//
+//                break;
+//            default:
+//
+//                NSLog(@"manager suspendDownload");
+////                [weakSelf suspendDownload];
+//                break;
+//        }
+//    }];
+//    [[AFNetworkReachabilityManager sharedManager]startMonitoring];
+//}
 
 - (void)downloadVideoWithUrlString:(NSString *)urlStr downloadProgressHandler:(ZBLM3u8ManagerDownloadProgressHandler)downloadProgressHandler downloadSuccessBlock:(ZBLM3u8ManagerDownloadSuccessBlock) downloadSuccessBlock
 {
     dispatch_async(_downloadQueue, ^{
+        ///是否使用信号量处理
         dispatch_semaphore_wait(_movieSemaphore, DISPATCH_TIME_FOREVER);
         __weak __typeof(self) weakself = self;
-        [[self downloadContainerWithUrlString:urlStr] startDownloadWithUrlString:urlStr  downloadProgressHandler:^(float progress) {
+        ZBLM3u8DownloadContainer *dc = [self downloadContainerWithUrlString:urlStr];
+        [dc startDownloadWithUrlString:urlStr  downloadProgressHandler:^(float progress) {
             downloadProgressHandler(progress);
         } completaionHandler:^(NSString *locaLUrl, NSError *error) {
             if (!error) {
+                [weakself _lock];
                 [weakself.downloadContainerDictionary removeObjectForKey:[ZBLM3u8Setting uuidWithUrl:urlStr]];
+                [weakself _unlock];
                 NSLog(@"下载完成:%@",urlStr);
                 downloadSuccessBlock(locaLUrl);
             }
             else
             {
                 NSLog(@"下载失败:%@",error);
-                [self resumeDownload];
+//                [self resumeDownload];
             }
-            NSLog(@"%@",weakself.downloadContainerDictionary.allKeys);
             dispatch_semaphore_signal(_movieSemaphore);
+#ifdef DEBUG
+            [weakself _lock];
+            NSLog(@"%@",weakself.downloadContainerDictionary.allKeys);
+            [weakself _unlock];
+#endif
         }];
     });
 }
@@ -104,34 +113,35 @@
 //下载中是可以接受 消息的
 - (void)resumeDownload
 {
-    //    if (!_suspend) {
-    //        return;
-    //    }
+    if (!_suspend) {
+        return;
+    }
     _suspend = NO;
-    dispatch_sync(_downloadQueue, ^{
+//    dispatch_barrier_async(_downloadQueue, ^{
         [self _lock];
         NSArray <ZBLM3u8DownloadContainer *> *containers = _downloadContainerDictionary.allValues;
         [self _unlock];
         for (ZBLM3u8DownloadContainer *dc in containers) {
             [dc resumeDownload];
         }
-    });
+
+//    });
 }
 
 - (void)suspendDownload
 {
-    if (_suspend) {
-        return;
-    }
+//    if (_suspend) {
+//        return;
+//    }
     _suspend = YES;
-    dispatch_sync(_downloadQueue, ^{
+//    dispatch_barrier_async(_downloadQueue, ^{
         [self _lock];
         NSArray <ZBLM3u8DownloadContainer *> *containers = _downloadContainerDictionary.allValues;
         [self _unlock];
         for (ZBLM3u8DownloadContainer *dc in containers) {
             [dc suspendDownload];
         }
-    });
+//    });
 }
 
 #pragma mark -
@@ -159,7 +169,6 @@
 #pragma mark - service
 - (void)tryStartLocalService
 {
-    [self _lock];
     if (!self.httpServer) {
         self.httpServer=[[HTTPServer alloc]init];
         [self.httpServer setType:@"_http._tcp."];
@@ -177,7 +186,6 @@
     {
         [self.httpServer start:nil];
     }
-    [self _unlock];
 }
 - (void)tryStopLocalService
 {

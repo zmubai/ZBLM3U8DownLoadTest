@@ -45,7 +45,6 @@
 		DB1394281F867C47003745EE /* DDContextFilterLogFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = DB1394171F867C47003745EE /* DDContextFilterLogFormatter.m */; };
 		DB1394291F867C47003745EE /* DDDispatchQueueLogFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = DB1394191F867C47003745EE /* DDDispatchQueueLogFormatter.m */; };
 		DB13942A1F867C47003745EE /* DDMultiFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = DB13941B1F867C47003745EE /* DDMultiFormatter.m */; };
-		DB13942B1F867C47003745EE /* LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = DB13941F1F867C47003745EE /* LICENSE.txt */; };
 		DB13942C1F867C47003745EE /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = DB1394201F867C47003745EE /* README.md */; };
 		DB13942F1F867E21003745EE /* libxml2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = DB13942E1F867E21003745EE /* libxml2.tbd */; };
 		DBA7D5461F87D38900CD21C9 /* AFHTTPSessionManager.m in Sources */ = {isa = PBXBuildFile; fileRef = DBA7D53A1F87D38900CD21C9 /* AFHTTPSessionManager.m */; };
@@ -549,7 +548,7 @@
 				TargetAttributes = {
 					DBD6D46E1F852B9400CE5D97 = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = XV9APHEY4J;
+						DevelopmentTeam = 54JV57CX88;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -580,7 +579,6 @@
 				DB1393D31F866C32003745EE /* LICENSE.txt in Resources */,
 				DBD6D4821F852B9400CE5D97 /* LaunchScreen.storyboard in Resources */,
 				DBD6D47F1F852B9400CE5D97 /* Assets.xcassets in Resources */,
-				DB13942B1F867C47003745EE /* LICENSE.txt in Resources */,
 				DBD6D47D1F852B9400CE5D97 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -763,7 +761,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = XV9APHEY4J;
+				DEVELOPMENT_TEAM = 54JV57CX88;
 				HEADER_SEARCH_PATHS = "${SDK_DIR}/usr/include/libxml2";
 				INFOPLIST_FILE = M3U8DownLoadTest/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
@@ -776,7 +774,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = XV9APHEY4J;
+				DEVELOPMENT_TEAM = 54JV57CX88;
 				HEADER_SEARCH_PATHS = "${SDK_DIR}/usr/include/libxml2";
 				INFOPLIST_FILE = M3U8DownLoadTest/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";

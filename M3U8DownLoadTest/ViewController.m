@@ -32,25 +32,29 @@
     [self.view addSubview:self.scrollView];
     
     UIButton *suspendBt = [UIButton buttonWithType:UIButtonTypeSystem];
-    suspendBt.frame = CGRectMake(15, 20, 60, 40);
+    suspendBt.frame = CGRectMake(15, 50, 60, 40);
     [suspendBt setTitle:@"suspend" forState:UIControlStateNormal];
     [suspendBt addTarget:self action:@selector(suspend) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:suspendBt];
     
     UIButton *resumeBt = [UIButton buttonWithType:UIButtonTypeSystem];
-    resumeBt.frame = CGRectMake(80, 20, 60, 40);
+    resumeBt.frame = CGRectMake(80, 50, 60, 40);
     [resumeBt setTitle:@"resume" forState:UIControlStateNormal];
     [resumeBt addTarget:self action:@selector(resume) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:resumeBt];
     
-    UIScrollView *progressView = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 60, self.view.bounds.size.width, 40)];
+    UIScrollView *progressView = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 90, self.view.bounds.size.width, 40)];
     progressView.backgroundColor = [UIColor grayColor];
     [self.view addSubview:progressView];
-    
-    //抓取优酷的链接
-    NSArray *urlArr = @[@"http://pl-ali.youku.com/playlist/m3u8?vid=XMzA1MzE5NTcxNg%3D%3D&type=flv&ups_client_netip=14.127.248.183&ups_ts=1507280234&utid=WByvE10ZfJcDAJDjRNep1SWR&ccode=02010201&psid=4d4d8a18d07ff39fc920795a224733af&duration=664&expire=18000&ups_key=e5b7469da6fe52632d086afd09d4bcb1",
-                        @"http://pl-ali.youku.com/playlist/m3u8?vid=XMzA1MzE5NTcxNg%3D%3D&type=mp4&ups_client_netip=14.127.248.183&ups_ts=1507280234&utid=WByvE10ZfJcDAJDjRNep1SWR&ccode=02010201&psid=4d4d8a18d07ff39fc920795a224733af&duration=664&expire=18000&ups_key=e5b7469da6fe52632d086afd09d4bcb1",
-                        @"http://pl-ali.youku.com/playlist/m3u8?vid=XMzA1MzE5NTcxNg%3D%3D&type=hd2&ups_client_netip=14.127.248.183&ups_ts=1507280234&utid=WByvE10ZfJcDAJDjRNep1SWR&ccode=02010201&psid=4d4d8a18d07ff39fc920795a224733af&duration=664&expire=18000&ups_key=e5b7469da6fe52632d086afd09d4bcb1"
+    /*
+     一些免费的m3u8链接【格式可能不兼容，需要分析处理】
+     https://bitmovin.com/mpeg-dash-hls-examples-sample-streams/
+     */
+
+    NSArray *urlArr = @[@"https://bitmovin-a.akamaihd.net/content/playhouse-vr/m3u8s/105560_video_360_1000000.m3u8",
+                        @"https://bitmovin-a.akamaihd.net/content/playhouse-vr/m3u8s/105560_video_540_1500000.m3u8",
+                        @"https://bitmovin-a.akamaihd.net/content/playhouse-vr/m3u8s/105560_video_720_3000000.m3u8",
+                        @"https://bitmovin-a.akamaihd.net/content/playhouse-vr/m3u8s/105560_video_1080_5000000.m3u8"
                         ].mutableCopy;
     
     self.scrollView.contentSize = CGSizeMake(self.view. bounds.size.width, self.view.frame.size.width * 9.0 / 16.0 * urlArr.count);

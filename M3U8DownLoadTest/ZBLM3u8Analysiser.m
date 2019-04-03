@@ -78,7 +78,10 @@ NSString * const ZBLM3u8AnalysiserAnalysisErrorDomain = @"error.m3u8.analysiser.
 
 + (void)analysisWithM3u8String:(NSString*)m3u8String completaionHandler:(ZBLM3u8AnalysiseCompletaionHandler)completaionHandler
 {
-    
+#ifdef DEBUG
+    /*如果是相对路径 需要特殊处理*/
+    m3u8String = [m3u8String stringByReplacingOccurrencesOfString:@"../" withString:@"https://bitmovin-a.akamaihd.net/content/playhouse-vr/"];
+#endif
     ZBLM3u8Info *info = [ZBLM3u8Info new];
     info.version = [[m3u8String subStringFrom:@"#EXT-X-VERSION:" to:@"#"] removeSpaceAndNewline];
     info.targetduration = [[m3u8String subStringFrom:@"#EXT-X-TARGETDURATION:" to:@"#"] removeSpaceAndNewline];
@@ -97,21 +100,23 @@ NSString * const ZBLM3u8AnalysiserAnalysisErrorDomain = @"error.m3u8.analysiser.
     NSMutableArray *tsInfos = @[].mutableCopy;
     m3u8String = [m3u8String substringFromIndex:tsRange.location];
     while (tsRange.location != NSNotFound) {
-        ZBLM3u8TsInfo *tsInfo = [ZBLM3u8TsInfo new];
-        tsInfo.duration = [m3u8String subStringFrom:@"#EXTINF:" to:@","];
-        m3u8String = [m3u8String subStringForm:@"," offset:1];
-        tsInfo.oriUrlString = [[m3u8String subStringTo:@"#"] removeSpaceAndNewline];
-        
-        NSRange exRange = [m3u8String rangeOfString:@"#EX"];
-        NSRange discontinuityRange = [m3u8String rangeOfString:@"#EXT-X-DISCONTINUITY"];
-        if (exRange.location == discontinuityRange.location) {
-            tsInfo.hasDiscontiunity = YES;
-        }
-        tsInfo.index = index ++;
-        [tsInfos addObject:tsInfo];
-        tsRange = [m3u8String rangeOfString:@"#EXTINF:"];
-        if (tsRange.location != NSNotFound) {
-            m3u8String = [m3u8String subStringForm:@"#EXTINF:" offset:0];
+        @autoreleasepool {
+            ZBLM3u8TsInfo *tsInfo = [ZBLM3u8TsInfo new];
+            tsInfo.duration = [m3u8String subStringFrom:@"#EXTINF:" to:@","];
+            m3u8String = [m3u8String subStringForm:@"," offset:1];
+            tsInfo.oriUrlString = [[m3u8String subStringTo:@"#"] removeSpaceAndNewline];
+
+            NSRange exRange = [m3u8String rangeOfString:@"#EX"];
+            NSRange discontinuityRange = [m3u8String rangeOfString:@"#EXT-X-DISCONTINUITY"];
+            if (exRange.location == discontinuityRange.location) {
+                tsInfo.hasDiscontiunity = YES;
+            }
+            tsInfo.index = index ++;
+            [tsInfos addObject:tsInfo];
+            tsRange = [m3u8String rangeOfString:@"#EXTINF:"];
+            if (tsRange.location != NSNotFound) {
+                m3u8String = [m3u8String subStringForm:@"#EXTINF:" offset:0];
+            }
         }
     }
     NSLog(@"analysis compelte");

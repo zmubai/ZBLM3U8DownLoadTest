@@ -7,6 +7,7 @@
 //
 
 #import "NSString+m3u8.h"
+#import <CommonCrypto/CommonDigest.h>
 
 @implementation NSString (m3u8)
 - (NSString *)subStringFrom:(NSString *)startString to:(NSString *)endString
