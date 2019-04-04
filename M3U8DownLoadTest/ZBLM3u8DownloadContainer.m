@@ -220,21 +220,4 @@ NSString * const ZBLM3u8DownloadContainerGreateRootDirErrorDomain = @"error.m3u8
     dispatch_semaphore_signal(_lock);
 }
 
-- (void)setM3u8Info:(ZBLM3u8Info *)m3u8Info
-{
-    _m3u8Info = m3u8Info;
-    if (_m3u8Info.keyUri.length > 0) {
-        _m3u8Info.keyLocalUri = [NSString stringWithFormat:@"%@/%@/%@",
-                                 [ZBLM3u8Setting localHost],
-                                 [ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl],
-                                 [ZBLM3u8Setting keyFileName]];
-    }
-    for (ZBLM3u8TsInfo *tsInfo in _m3u8Info.tsInfos) {
-        tsInfo.localUrlString = [NSString stringWithFormat:@"%@/%@/%@",
-                                 [ZBLM3u8Setting localHost],
-                                 [ZBLM3u8Setting uuidWithUrl:_m3u8OriUrl],
-                                 [ZBLM3u8Setting tsFileWithIdentify:@(tsInfo.index).stringValue]];
-    }
-}
-
 @end
