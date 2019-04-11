@@ -31,8 +31,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "157"
             endingLineNumber = "157"
-            landmarkName = "@implementation ZBLM3u8Downloader"
-            landmarkType = "3">
+            landmarkName = "-verifyDownloadCountAndCallbackByDownloadSuccess:"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -47,8 +47,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "156"
             endingLineNumber = "156"
-            landmarkName = "-downloadSuccessTosaveData:downloadInfo:"
-            landmarkType = "7">
+            landmarkName = "ZBLM3u8Downloader"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -79,8 +79,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "155"
             endingLineNumber = "155"
-            landmarkName = "-downloadSuccessTosaveData:downloadInfo:"
-            landmarkType = "7">
+            landmarkName = "ZBLM3u8Downloader"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -94,9 +94,7 @@
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "286"
-            endingLineNumber = "286"
-            landmarkName = "-suspendDownload"
-            landmarkType = "7">
+            endingLineNumber = "286">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -110,9 +108,7 @@
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "273"
-            endingLineNumber = "273"
-            landmarkName = "-suspendDownload"
-            landmarkType = "7">
+            endingLineNumber = "273">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
