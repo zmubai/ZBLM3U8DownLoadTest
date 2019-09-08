@@ -30,3 +30,7 @@
 
 地址：[https://github.com/zmubai/m3u8DownloadSimpleDemo](https://github.com/zmubai/m3u8DownloadSimpleDemo)
 
+#### 使用operation实现的版本(推荐)
+支持媒体并发控制，支持单个媒体文件并发控制。支持任务取消，支持任务挂起和恢复。
+
+地址：[git@github.com:zmubai/M3U8DemoByOperation.git](git@github.com:zmubai/M3U8DemoByOperation.git)
